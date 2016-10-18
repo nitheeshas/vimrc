@@ -1,78 +1,80 @@
 set shell=/bin/bash
 
 " Auromatic reload of vimrc
-autocmd! bufwritepost .vimrc source %
+"autocmd! bufwritepost .vimrc source %
 
 set showcmd
+set nocompatible
+filetype off
 
-" Key remaps
-" nmap <S-Enter> O<Esc>
-nmap <CR> O<Esc>
-
-"map <C-l> :tabn<CR>
-"map <C-h> :tabp<CR>
-"map <C-n> :tabnew<CR>
-
-set nocompatible              " be iMproved, required
-filetype off                  " required
-
-" set the runtime path to include Vundle and initialize
+" Set the runtime path to include Vundle and initialize
 set rtp+=~/.vim/bundle/Vundle.vim
 call vundle#begin()
-" alternatively, pass a path where Vundle should install plugins
-"call vundle#begin('~/some/path/here')
 
-" let Vundle manage Vundle, required
 Plugin 'VundleVim/Vundle.vim'
-
-Plugin 'powerline/powerline', {'rtp': 'powerline/bindings/vim/'}
-
 Plugin 'scrooloose/nerdtree'
-
-Plugin 'klen/python-mode'
-
-"Plugin 'davidhalter/jedi-vim'
+Plugin 'Valloric/YouCompleteMe'
+Plugin 'powerline/powerline', {'rtp': 'powerline/bindings/vim/'}
+Plugin 'tmhedberg/SimpylFold'
 
 call vundle#end()
 
-" PyMode tweaks
-"let ropevim_enable_shortcuts=1
-"let g:pymode_rope_goto_def_newwin = "vnew"
-"let g:pymode_rope_extended_complete = 1
-"let g:pymode_breakpoint = 0
-"let g:pymode_syntax = 1
-"let g:pymode_syntax_builtin_objs = 0
-"let g:pymode_syntax_builtin_funcs = 0
+" Leader key
+"let mapleader = " "
+"let g:mapleader = " "
+map <SPACE> <leader>
 
-let g:pymode_rope=1
-set completeopt=menu
-let g:pymode_trim_whitespaces = 1
-let g:pymode_rope_completion = 1
-let g:pymode_rope_complete_on_dot = 0
-let g:pymode_rope_competion_bind = '<C-Space>'
-let g:pymode_rope_autoimport = 0
+"" Nerdtree tweaks
+map <leader>` :NERDTreeToggle<CR>
 
-filetype plugin indent on
+"" YouCompleteMe setup
+let g:ycm_autoclose_preview_window_after_completion = 1
+" Show preview window of YouCompleteMe at the bottom
+set splitbelow
 
-inoremap jk <ESC>
-
-set bs=2
-
-augroup vimrc_autocmds
-    autocmd!
-    " highlight characters past column 120 
-    autocmd FileType python highlight Excess ctermbg=DarkGrey guibg=Black
-    autocmd FileType python match Excess /\%120v.*/
-    autocmd FileType python set nowrap
-    augroup END
-
-" Powerline setup
+"" Powerline setup
 set guifont=DejaVu\ Sans\ Mono\ for\ Powerline\ 9
 set laststatus=2
 set term=xterm-256color
 
-let mapleader = ","
-let g:mapleader = ","
+" SimpylFold setup
+let g:SimpylFold_docstring_preview=1
+let g:SimpylFold_fold_docstring = 0
+let g:SimpylFold_fold_import = 0
+"Required by SimpylFold
+"autocmd BufWinEnter *.py setlocal foldexpr=SimpylFold(v:lnum) foldmethod=expr
+"autocmd BufWinLeave *.py setlocal foldexpr< foldmethod<
+" -----------Plugin config end----------------
+
+
+" Filetype based indentation
+" This command will use indentation scripts located in the 
+" indent folder of the vim installation.
+filetype plugin indent on
+
+" To use Vim color scheme
+syntax on
+
+" Remap ESC key with jk
+inoremap jk <ESC>
+
+" Show line numbers
+set number
+
+" New line in normal mode
+nmap <CR> O<Esc>
+
+" Move the cursor over automatically inserted indents and 
+" over the start/end of line
+set bs=2
+
+augroup vimrc_autocmds
+    autocmd!
+    " highlight characters past column 120
+    autocmd FileType python highlight Excess ctermbg=DarkGrey guibg=Black
+    autocmd FileType python match Excess /\%120v.*/
+    autocmd FileType python set nowrap
+    augroup END
 
 " Save and Quit shortcuts
 nmap <leader>w :w!<cr>
@@ -90,29 +92,37 @@ map <leader>k <c-w>k
 map <leader>l <c-w>l
 map <leader>h <c-w>h
 
-" Nerdtree tweaks
-map <leader>` :NERDTreeToggle<CR>
-
 " Remove highlights
 map <leader>nh <esc>:noh<cr>
 
 " Paste from outside
-map <leader>p <esc>:set paste<cr>
-map <leader>pp <esc>:set nopaste<cr>
+" Automatically switch to and from paste mode
+let &t_SI .= "\<Esc>[?2004h"
+let &t_EI .= "\<Esc>[?2004l"
+inoremap <special> <expr> <Esc>[200~ XTermPasteBegin()
+function! XTermPasteBegin()
+      set pastetoggle=<Esc>[201~
+        set paste
+          return ""
+      endfunction
 
 " Copy word
-map <leader>cw <esc>bye
+map <leader>cc <esc>bye
 
 " Indentation shortcuts in visual mode
 vnoremap < <gv
 vnoremap > >gv
 
-filetype plugin indent on
-syntax on
+" Set width of doc; use if want to wrap automatically
+"set tw=79
 
-set number	" Show line numbers
-set tw=79	" Width of doc
-" set nowrap	" Don't automatically wrap on load
+" Don't automatically wrap on load
+"set nowrap
+
+" Wrap, but not on a new line
+set wrap linebreak nolist
+
+" Set width and color indicators
 set colorcolumn=80
 highlight ColorColumn ctermbg=25
 
@@ -122,7 +132,7 @@ highlight ColorColumn ctermbg=25
 set history=700
 set undolevels=700
 
-" Real programmers don't use TABs ?! WTF! <Update: well yeah, some ppl do!>
+" Tabs replaced with 4 spaces
 set tabstop=4
 set softtabstop=4
 set shiftwidth=4
@@ -137,6 +147,3 @@ set smartcase
 
 "Remove all trailing whitespace by pressing F5
 nnoremap <F5> :let _s=@/<Bar>:%s/\s\+$//e<Bar>:let @/=_s<Bar><CR>
-
-" Dont fold lines
-set nofoldenable

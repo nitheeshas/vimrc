@@ -1,7 +1,7 @@
 set shell=/bin/bash
 
 " Auromatic reload of vimrc
-"autocmd! bufwritepost .vimrc source %
+autocmd! bufwritepost .vimrc source %
 
 set showcmd
 set nocompatible
@@ -13,6 +13,7 @@ call vundle#begin()
 
 Plugin 'VundleVim/Vundle.vim'
 Plugin 'scrooloose/nerdtree'
+Plugin 'scrooloose/syntastic'
 Plugin 'Valloric/YouCompleteMe'
 Plugin 'powerline/powerline', {'rtp': 'powerline/bindings/vim/'}
 Plugin 'tmhedberg/SimpylFold'
@@ -25,7 +26,13 @@ call vundle#end()
 map <SPACE> <leader>
 
 "" Nerdtree tweaks
-map <leader>` :NERDTreeToggle<CR>
+map <leader><Tab> :NERDTreeToggle<CR>
+
+"" Syntastic setup
+let g:syntastic_always_populate_loc_list = 1
+let g:syntastic_auto_loc_list = 1
+let g:syntastic_check_on_open = 1
+let g:syntastic_check_on_wq = 0
 
 "" YouCompleteMe setup
 let g:ycm_autoclose_preview_window_after_completion = 1
@@ -42,8 +49,8 @@ let g:SimpylFold_docstring_preview=1
 let g:SimpylFold_fold_docstring = 0
 let g:SimpylFold_fold_import = 0
 "Required by SimpylFold
-"autocmd BufWinEnter *.py setlocal foldexpr=SimpylFold(v:lnum) foldmethod=expr
-"autocmd BufWinLeave *.py setlocal foldexpr< foldmethod<
+autocmd BufWinEnter *.py setlocal foldexpr=SimpylFold(v:lnum) foldmethod=expr
+autocmd BufWinLeave *.py setlocal foldexpr< foldmethod<
 " -----------Plugin config end----------------
 
 
@@ -80,6 +87,8 @@ augroup vimrc_autocmds
 nmap <leader>w :w!<cr>
 nmap <leader>q :q<cr>
 nmap <leader>qq :q!<cr>
+nmap <leader>wq :wq<cr>
+nmap <leader>qa :qall<cr>
 
 " Tabs navigation
 map <leader>. <esc>:tabnew<cr>
@@ -94,6 +103,9 @@ map <leader>h <c-w>h
 
 " Remove highlights
 map <leader>nh <esc>:noh<cr>
+
+" Fold/Unfold toggle
+map <leader><Space> <esc>za<esc>
 
 " Paste from outside
 " Automatically switch to and from paste mode

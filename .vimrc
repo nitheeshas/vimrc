@@ -17,6 +17,7 @@ Plugin 'scrooloose/syntastic'
 Plugin 'Valloric/YouCompleteMe'
 Plugin 'powerline/powerline', {'rtp': 'powerline/bindings/vim/'}
 Plugin 'tmhedberg/SimpylFold'
+Plugin 'jmcantrell/vim-virtualenv'
 
 call vundle#end()
 
@@ -36,6 +37,8 @@ let g:syntastic_check_on_wq = 0
 
 "" YouCompleteMe setup
 let g:ycm_autoclose_preview_window_after_completion = 1
+let g:ycm_python_binary_path = 'python'
+let g:ycm_global_ycm_extra_conf = '~/.vim/bundle/YouCompleteMe/.ycm_extra_conf.py'
 " Show preview window of YouCompleteMe at the bottom
 set splitbelow
 
@@ -51,11 +54,20 @@ let g:SimpylFold_fold_import = 0
 "Required by SimpylFold
 autocmd BufWinEnter *.py setlocal foldexpr=SimpylFold(v:lnum) foldmethod=expr
 autocmd BufWinLeave *.py setlocal foldexpr< foldmethod<
+
 " -----------Plugin config end----------------
 
 
+" Venv <venv> to activate and restart YCM server
+" Function to list virtualenvs
+:function! ReturnVirtualEnvsList(A,L,P)
+:    return system("ls -d ~/.virtualenvs/*/ \| cut -d'/' -f5")
+:endfunction
+" changing virtualenv should restart ycmserver
+:command! -nargs=+ -complete=custom,ReturnVirtualEnvsList Venv :VirtualEnvActivate <args> | YcmRestartServer
+
 " Filetype based indentation
-" This command will use indentation scripts located in the 
+" This command will use indentation scripts located in the
 " indent folder of the vim installation.
 filetype plugin indent on
 
@@ -71,7 +83,7 @@ set number
 " New line in normal mode
 nmap <CR> O<Esc>
 
-" Move the cursor over automatically inserted indents and 
+" Move the cursor over automatically inserted indents and
 " over the start/end of line
 set bs=2
 
@@ -159,3 +171,6 @@ set smartcase
 
 "Remove all trailing whitespace by pressing F5
 nnoremap <F5> :let _s=@/<Bar>:%s/\s\+$//e<Bar>:let @/=_s<Bar><CR>
+
+"Remove whitespaces automatically
+"autocmd BufWritePre * %s/\s\+$//e

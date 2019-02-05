@@ -194,6 +194,17 @@ function! XTermPasteBegin()
 " Copy word
 map <leader>cc <esc>bye
 
+" Delete without putting in register
+nnoremap <leader>d "_d
+
+" Copy and paste to clipboard
+noremap <Leader>Y "*y
+noremap <Leader>P "*p
+noremap <Leader>y "+y
+noremap <Leader>p "+p
+nnoremap <leader>d "_d
+xnoremap <leader>d "_d
+
 " Indentation shortcuts in visual mode
 vnoremap < <gv
 vnoremap > >gv

@@ -63,6 +63,7 @@ map <SPACE> <leader>
 "" Nerdtree tweaks
 map <leader><Tab> :NERDTreeToggle<CR>
 map <leader>f :NERDTreeFind<CR>
+let g:NERDTreeWinSize=24
 
 "" Syntastic setup
 let g:syntastic_always_populate_loc_list = 1
@@ -216,7 +217,7 @@ vnoremap > >gv
 "set nowrap
 
 " Wrap, but not on a new line
-set wrap linebreak nolist
+"set wrap linebreak nolist
 
 " Set width and color indicators
 set colorcolumn=120
@@ -265,5 +266,5 @@ nnoremap <F5> :let _s=@/<Bar>:%s/\s\+$//e<Bar>:let @/=_s<Bar><CR>
 "autocmd BufWritePre * %s/\s\+$//e
 
 " Set window width to 120 on pressing <F9>
-nnoremap <F9> :vertical resize 31:set winfixwidth<CR>
+nnoremap <F9> :vertical resize 24:set winfixwidth<CR>
 nnoremap <F10> :vertical resize 120:set winfixwidth<CR>

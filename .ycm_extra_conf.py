@@ -105,6 +105,8 @@ def FindCorrespondingPackageName(filename, package_names):
 
 
 def FindCorrespondingCompilationDatabase(filename):
+    print "File opened : " + filename
+
     build_dir = '/home/nitheesh/ad-platform/build_dev_debug'
     packages_dir = '/home/nitheesh/ad-platform/.catkin_tools/profiles/dev_debug/packages'
     package_names = os.listdir(packages_dir)
@@ -145,13 +147,17 @@ def GetCompilationInfoForFile( filename, database, package_name ):
   if IsHeaderFile( filename ):
     package_path = os.path.join( filename[:filename.find(package_name)], package_name )
     source_file_name = os.path.splitext(os.path.basename(filename))[0] + '.cpp'
+    print "Header found, corrensponding source file : " + source_file_name
+    print "Header found, package path : " + package_path
     for root, dirs, files in os.walk(package_path):
       if source_file_name in files:
         source_file_path = os.path.join(root, source_file_name)
-        compilation_info = database.GetCompilationInfoForFile(
-          source_file_path )
-        if compilation_info.compiler_flags_:
-          return compilation_info
+        compilation_database_folder, package_name = FindCorrespondingCompilationDatabase(source_file_path)
+        #compilation_info = database.GetCompilationInfoForFile(
+        #  source_file_path )
+        if os.path.exists( compilation_database_folder ):
+          database = ycm_core.CompilationDatabase( compilation_database_folder )
+        return database.GetCompilationInfoForFile( source_file_path )
     return None
 
   return database.GetCompilationInfoForFile( filename )
@@ -173,8 +179,10 @@ def FlagsForFile( filename, **kwargs ):
   
   if os.path.exists( compilation_database_folder ):
     database = ycm_core.CompilationDatabase( compilation_database_folder )
+    print "Compile commands path exists"
   else:
     database = None
+    print "Compile commands path does not exist"
 
 
   # If the file is a header, try to find the corresponding source file and

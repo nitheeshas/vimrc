@@ -10,6 +10,9 @@ set showcmd
 set nocompatible
 filetype off
 
+" :! will behave as bash
+"set shellcmdflag=-ic
+
 " To use Vim color scheme
 syntax on
 "colorscheme nighted
@@ -38,6 +41,7 @@ Plugin 'majutsushi/tagbar',                   { 'on': 'TagbarToggle' }
 Plugin 'ctrlpvim/ctrlp.vim'
 Plugin 'rdnetto/YCM-Generator'
 Plugin 'tpope/vim-fugitive'
+Plugin 'tpope/vim-abolish'
 "Plugin 'octol/vim-cpp-enhanced-highlight'
 "Plugin 'xolox/vim-misc'
 "Plugin 'xolox/vim-easytags'
@@ -60,6 +64,11 @@ let g:easytags_async = 1
 "let g:mapleader = " "
 map <SPACE> <leader>
 
+"" vim-abolish for converting to camelCase or snake_case or MixedCase
+" crc -> camelCase
+" crs -> snake_case
+" crm -> MixedCase
+
 "" Nerdtree tweaks
 map <leader><Tab> :NERDTreeToggle<CR>
 map <leader>f :NERDTreeFind<CR>
@@ -76,6 +85,9 @@ let g:syntastic_check_on_wq = 0
 let g:ycm_python_binary_path = 'python'
 let g:ycm_global_ycm_extra_conf = '~/.vim/bundle/YouCompleteMe/.ycm_extra_conf.py'
 "let g:ycm_collect_identifiers_from_tags_files = 1
+map <leader>fix :YcmCompleter FixIt<CR>
+map g] :YcmCompleter GoToDefinition<CR>
+map gt] :YcmCompleter GoTo<CR>
 
 "" Powerline setup
 set guifont=DejaVu\ Sans\ Mono\ for\ Powerline\ 9
@@ -117,8 +129,8 @@ function! QuickfixToggle()
     endif
 endfunction
 
-"nnoremap rj :lnext<CR>
-"nnoremap rk :lprev<CR>
+nnoremap <leader>] :lnext<CR>
+nnoremap <leader>[ :lprev<CR>
 
 " Venv <venv> to activate and restart YCM server
 " Function to list virtualenvs

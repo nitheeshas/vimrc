@@ -42,11 +42,26 @@ Plugin 'ctrlpvim/ctrlp.vim'
 Plugin 'rdnetto/YCM-Generator'
 Plugin 'tpope/vim-fugitive'
 Plugin 'tpope/vim-abolish'
+Plugin 'grailbio/bazel-compilation-database'
+Plugin 'google/vim-maktaba'
+Plugin 'google/vim-codefmt'
+Plugin 'google/vim-glaive'
 "Plugin 'octol/vim-cpp-enhanced-highlight'
 "Plugin 'xolox/vim-misc'
 "Plugin 'xolox/vim-easytags'
 
 call vundle#end()
+ 
+call glaive#Install()
+" Optional: Enable codefmt's default mappings on the <Leader>= prefix.
+Glaive codefmt plugin[mappings]
+Glaive codefmt google_java_executable="java -jar /path/to/google-java-format-VERSION-all-deps.jar"
+
+augroup autoformat_settings
+  autocmd FileType bzl AutoFormatBuffer buildifier
+  autocmd FileType c,cpp,proto,javascript AutoFormatBuffer clang-format
+  autocmd FileType python AutoFormatBuffer yapf
+augroup END
 
 nnoremap <leader>b :CtrlPTag<cr>
 
@@ -73,6 +88,8 @@ map <SPACE> <leader>
 map <leader><Tab> :NERDTreeToggle<CR>
 map <leader>f :NERDTreeFind<CR>
 let g:NERDTreeWinSize=24
+let NERDTreeShowLineNumbers=1
+autocmd FileType nerdtree setlocal relativenumber
 
 "" Syntastic setup
 let g:syntastic_always_populate_loc_list = 1
@@ -83,11 +100,13 @@ let g:syntastic_check_on_wq = 0
 "" YouCompleteMe setup
 "let g:ycm_autoclose_preview_window_after_completion = 1
 let g:ycm_python_binary_path = 'python'
-let g:ycm_global_ycm_extra_conf = '~/.vim/bundle/YouCompleteMe/.ycm_extra_conf.py'
+"let g:ycm_global_ycm_extra_conf = '~/.vim/bundle/YouCompleteMe/.ycm_extra_conf.py'
 "let g:ycm_collect_identifiers_from_tags_files = 1
 map <leader>fix :YcmCompleter FixIt<CR>
-map g] :YcmCompleter GoToDefinition<CR>
-map gt] :YcmCompleter GoTo<CR>
+map gt] :YcmCompleter GoToDefinition<CR>
+map g] :YcmCompleter GoTo<CR>
+let g:ycm_max_diagnostics_to_display = 9999
+let g:ycm_disable_for_files_larger_than_kb = 9999
 
 "" Powerline setup
 set guifont=DejaVu\ Sans\ Mono\ for\ Powerline\ 9
@@ -149,7 +168,18 @@ filetype plugin indent on
 inoremap jk <ESC>
 
 " Show line numbers
-set number
+"set number
+"set nu
+
+" Show absolute and relative line numbers
+set number relativenumber
+set nu rnu
+
+augroup numbertoggle
+    autocmd!
+    autocmd BufEnter,FocusGained,InsertLeave * set relativenumber
+    autocmd BufLeave,FocusLost,InsertEnter   * set norelativenumber
+augroup END
 
 " New line in normal mode
 nmap <CR> O<Esc>
@@ -167,7 +197,7 @@ augroup vimrc_autocmds
     autocmd FileType python highlight Excess ctermbg=DarkGrey guibg=Black
     autocmd FileType python match Excess /\%120v.*/
     autocmd FileType python set nowrap
-    augroup END
+augroup END
 
 " Save and Quit shortcuts
 nmap <leader>w :w!<cr>
@@ -177,15 +207,22 @@ nmap <leader>wq :wq<cr>
 nmap <leader>qa :qall<cr>
 
 " Tabs navigation
-map <leader>. <esc>:tabnew<cr>
-map <leader>n <esc>:tabp<cr>
-map <leader>m <esc>:tabn<cr>
+"map <leader>. <esc>:tabnew<cr>
+"map <leader>n <esc>:tabp<cr>
+"map <leader>m <esc>:tabn<cr>
+map <c-b> <esc>:tabnew<cr>
+map <c-n> <esc>:tabp<cr>
+map <c-m> <esc>:tabn<cr>
 
 " Navigating through splits
-map <leader>j <c-w>j
-map <leader>k <c-w>k
-map <leader>l <c-w>l
-map <leader>h <c-w>h
+"map <leader>j <c-w>j
+"map <leader>k <c-w>k
+"map <leader>l <c-w>l
+"map <leader>h <c-w>h
+map <c-j> <c-w>j
+map <c-k> <c-w>k
+map <c-l> <c-w>l
+map <c-h> <c-w>h
 
 " Remove highlights
 map <leader>nh <esc>:noh<cr>
@@ -274,9 +311,14 @@ cnoremap w!! w !sudo tee % >/dev/null
 "Remove all trailing whitespace by pressing F5
 nnoremap <F5> :let _s=@/<Bar>:%s/\s\+$//e<Bar>:let @/=_s<Bar><CR>
 
+" Run clang-format
+map <F7> :%pyf /usr/share/clang/clang-format-6.0/clang-format.py<CR>
+
 "Remove whitespaces automatically
 "autocmd BufWritePre * %s/\s\+$//e
 
 " Set window width to 120 on pressing <F9>
 nnoremap <F9> :vertical resize 24:set winfixwidth<CR>
 nnoremap <F10> :vertical resize 120:set winfixwidth<CR>
+
+command! PrettyPrintJSON %!python -m json.tool

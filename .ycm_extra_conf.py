@@ -1,235 +1,234 @@
-# This file is NOT licensed under the GPLv3, which is the license for the rest
-# of YouCompleteMe.
-#
-# Here's the license text for this file:
-#
-# This is free and unencumbered software released into the public domain.
-#
-# Anyone is free to copy, modify, publish, use, compile, sell, or
-# distribute this software, either in source code form or as a compiled
-# binary, for any purpose, commercial or non-commercial, and by any
-# means.
-#
-# In jurisdictions that recognize copyright laws, the author or authors
-# of this software dedicate any and all copyright interest in the
-# software to the public domain. We make this dedication for the benefit
-# of the public at large and to the detriment of our heirs and
-# successors. We intend this dedication to be an overt act of
-# relinquishment in perpetuity of all present and future rights to this
-# software under copyright law.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-# IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
-# OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
-# ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-# OTHER DEALINGS IN THE SOFTWARE.
-#
-# For more information, please refer to <http://unlicense.org/>
+#!/usr/bin/python
 
-from distutils.sysconfig import get_python_inc
-import platform
+# Copyright 2018 GRAIL, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Configuration file for YouCompleteMe to fetch C++ compilation flags from
+Bazel.
+
+See https://valloric.github.io/YouCompleteMe/#c-family-semantic-completion for
+how YCM works. In that section:
+For Option 1 (compilation database), use the generate.sh script in this
+repository.
+For Option 2 (.ycm_extra_conf.py), symlink this file to the root of your
+workspace and bazel's output_base, or set it as your global config.
+"""
+
+from __future__ import print_function
+
+import json
 import os
-import ycm_core
-
-# These are the compilation flags that will be used in case there's no
-# compilation database set (by default, one is not set).
-# CHANGE THIS LIST OF FLAGS. YES, THIS IS THE DROID YOU HAVE BEEN LOOKING FOR.
-flags = [
-'-Wall',
-'-Wextra',
-'-Werror',
-'-Wno-long-long',
-'-Wno-variadic-macros',
-'-fexceptions',
-'-DNDEBUG',
-# You 100% do NOT need -DUSE_CLANG_COMPLETER and/or -DYCM_EXPORT in your flags;
-# only the YCM source code needs it.
-'-DUSE_CLANG_COMPLETER',
-'-DYCM_EXPORT=',
-# THIS IS IMPORTANT! Without the '-x' flag, Clang won't know which language to
-# use when compiling headers. So it will guess. Badly. So C++ headers will be
-# compiled as C headers. You don't want that so ALWAYS specify the '-x' flag.
-# For a C project, you would set this to 'c' instead of 'c++'.
-'-x',
-'c++',
-'-isystem',
-'../pybind11',
-'-isystem',
-'../BoostParts',
-'-isystem',
-get_python_inc(),
-'-isystem',
-'../llvm/include',
-'-isystem',
-'../llvm/tools/clang/include',
-'-I',
-'.',
-'-I',
-'./ClangCompleter',
-'-isystem',
-'./tests/gmock/gtest',
-'-isystem',
-'./tests/gmock/gtest/include',
-'-isystem',
-'./tests/gmock',
-'-isystem',
-'./tests/gmock/include',
-'-isystem',
-'./benchmarks/benchmark/include',
-'-isystem',
-'/opt/ros/kinetic/include',
-'-isystem', '/usr/include/c++/5.4.0', '-isystem', '/usr/include/x86_64-linux-gnu/c++/5.4.0',
-'-std=c++14'
-]
-
-# Clang automatically sets the '-std=' flag to 'c++14' for MSVC 2015 or later,
-# which is required for compiling the standard library, and to 'c++11' for older
-# versions.
-if platform.system() != 'Windows':
-  flags.append( '-std=c++11' )
+import re
+import shlex
+import subprocess
+import sys
+import xml.etree.ElementTree as ElementTree
 
 
-def FindCorrespondingPackageName(filename, package_names):
-    dirname = filename
-    while(dirname != ''):
-        filename = os.path.dirname(filename)
-        dirname = os.path.basename(filename)
+def bazel_info():
+    """Returns a dict containing key values from bazel info."""
 
-        if dirname in package_names:
-            print "Found : " + dirname
-            return dirname
+    bazel_info_dict = dict()
+    try:
+        out = subprocess.check_output(['bazel', 'info', '--config=adp']).decode('utf-8').strip().split('\n')
+    except subprocess.CalledProcessError as err:
+        # This exit code is returned when this command is run outside of a bazel workspace.
+        if err.returncode == 2:
+            sys.exit(0)
 
-    return ''
+    for line in out:
+        key_val = line.strip().partition(": ")
+        bazel_info_dict[key_val[0]] = key_val[2]
 
-
-def FindCorrespondingCompilationDatabase(filename):
-    print "File opened : " + filename
-
-    build_dir = '/home/nitheesh/ad-platform/build_dev_debug'
-    packages_dir = '/home/nitheesh/ad-platform/.catkin_tools/profiles/dev_debug/packages'
-    package_names = os.listdir(packages_dir)
-
-    package_of_current_file = FindCorrespondingPackageName(filename, package_names)
-
-    compilation_database_folder = os.path.join(build_dir, package_of_current_file)
-    print "Compilation db : " + compilation_database_folder
-
-    return compilation_database_folder, package_of_current_file
-
-SOURCE_EXTENSIONS = [ '.cpp', '.cxx', '.cc', '.c', '.m', '.mm' ]
-
-def DirectoryOfThisScript():
-  return os.path.dirname( os.path.abspath( __file__ ) )
+    return bazel_info_dict
 
 
-def IsHeaderFile( filename ):
-  extension = os.path.splitext( filename )[ 1 ]
-  return extension in [ '.h', '.hxx', '.hpp', '.hh' ]
+def bazel_query(args):
+    """Executes bazel query with the given args and returns the output."""
+
+    # TODO: switch to cquery when it supports siblings and less crash-y with external repos.
+    query_cmd = ['bazel', 'query'] + args
+    proc = subprocess.Popen(query_cmd, stdout=subprocess.PIPE)
+    return proc.communicate()[0].decode('utf-8')
 
 
-def FindCorrespondingSourceFile( filename ):
-  if IsHeaderFile( filename ):
-    basename = os.path.splitext( filename )[ 0 ]
-    for extension in SOURCE_EXTENSIONS:
-      replacement_file = basename + extension
-      if os.path.exists( replacement_file ):
-        return replacement_file
-  return filename
+def file_to_target(filepath):
+    """Returns a string that works as a bazel target specification for the given file."""
+    if not filepath.startswith("external/"):
+        # The file path relative to repo root works for genfiles and binfiles too.
+        return filepath
+
+    # For external repos, we have to find the owner package manually.
+    repo_prefix = re.sub('external/([^/]*).*', '@\\1//', filepath)
+    filepath = re.sub('external/[^/]*/', '', filepath)
+
+    # Find out which package is the owner of this file.
+    query_result = bazel_query(['-k', repo_prefix + '...', '--output=package'])
+    packages = [package.strip() for package in query_result.split('\n')]
+
+    owner = ""
+    for package in packages:
+        package = package[len(repo_prefix):]
+        if filepath.startswith(package) and len(package) > len(owner):
+            owner = package
+
+    return repo_prefix + owner + ":" + os.path.relpath(filepath, owner)
 
 
-def GetCompilationInfoForFile( filename, database, package_name ):
-  # The compilation_commands.json file generated by CMake does not have entries
-  # for header files. So we do our best by asking the db for flags for a
-  # corresponding source file, if any. If one exists, the flags for that file
-  # should be good enough.
-  if IsHeaderFile( filename ):
-    package_path = os.path.join( filename[:filename.find(package_name)], package_name )
-    source_file_name = os.path.splitext(os.path.basename(filename))[0] + '.cpp'
-    print "Header found, corrensponding source file : " + source_file_name
-    print "Header found, package path : " + package_path
-    for root, dirs, files in os.walk(package_path):
-      if source_file_name in files:
-        source_file_path = os.path.join(root, source_file_name)
-        compilation_database_folder, package_name = FindCorrespondingCompilationDatabase(source_file_path)
-        #compilation_info = database.GetCompilationInfoForFile(
-        #  source_file_path )
-        if os.path.exists( compilation_database_folder ):
-          database = ycm_core.CompilationDatabase( compilation_database_folder )
-        return database.GetCompilationInfoForFile( source_file_path )
-    return None
+def standardize_file_target(file_target):
+    """For file targets that are not source files, return the target that generated them.
 
-  return database.GetCompilationInfoForFile( filename )
+    This is needed because rdeps of generated files do not include targets that reference
+    their generating rules.
+    https://github.com/bazelbuild/bazel/issues/4949
+    """
 
+    query_result = bazel_query(['--output=xml', file_target])
+    if not query_result:
+        sys.exit("Empty query response for {}. It is probably not handled by bazel".format(file_target))
 
-def FlagsForFile( filename, **kwargs ):
+    target_xml = ElementTree.fromstringlist(query_result.split('\n'))
+    source_element = target_xml.find('source-file')
+    if source_element is not None:
+        return file_target
 
-  # Set this to the absolute path to the folder (NOT the file!) containing the
-  # compile_commands.json file to use that instead of 'flags'. See here for
-  # more details: http://clang.llvm.org/docs/JSONCompilationDatabase.html
-  #
-  # You can get CMake to generate this file for you by adding:
-  #   set( CMAKE_EXPORT_COMPILE_COMMANDS 1 )
-  # to your CMakeLists.txt file.
-  #
-  # Most projects will NOT need to set this to anything; you can just change the
-  # 'flags' list of compilation flags. Notice that YCM itself uses that approach.
-  compilation_database_folder, package_name = FindCorrespondingCompilationDatabase(filename)
-  
-  if os.path.exists( compilation_database_folder ):
-    database = ycm_core.CompilationDatabase( compilation_database_folder )
-    print "Compile commands path exists"
-  else:
-    database = None
-    print "Compile commands path does not exist"
+    generated_element = target_xml.find('generated-file')
+    if generated_element is not None:
+        return generated_element.get('generating-rule')
+
+    sys.exit("Error parsing query xml for " + file_target + ":\n" + query_result)
 
 
-  # If the file is a header, try to find the corresponding source file and
-  # retrieve its flags from the compilation database if using one. This is
-  # necessary since compilation databases don't have entries for header files.
-  # In addition, use this source file as the translation unit. This makes it
-  # possible to jump from a declaration in the header file to its definition in
-  # the corresponding source file.
-  #filename = FindCorrespondingSourceFile( filename )
+def get_aspects_filepath(label, bazel_bin):
+    """Gets the file path for the generated aspects file that contains the
+    compile commands json entries.
+    """
 
-  #include_directories_list_file = open('/home/qxv2630/.vim/bundle/YouCompleteMe/include_directories.txt', 'r')
-  #include_directories = include_directories_list_file.readlines()
+    target_path = re.sub(':', '/', label)
+    target_path = re.sub('^@(.*)//', 'external/\\1/', target_path)
+    target_path = re.sub('^/*', '', target_path)
+    relative_file_path = target_path + '.compile_commands.json'
+    return os.path.join(bazel_bin, *relative_file_path.split('/'))
 
-  #include_directories = ['-I' + directory for directory in include_directories]
-  #include_directories = map(str.rstrip, include_directories)
 
-  #flags.extend(include_directories)
-  #print flags
+def get_compdb_json(aspects_filepath, bazel_exec_root):
+    """Returns the JSON string read from the file after necessary processing."""
 
-  if not database:
+    compdb_json_str = "[\n"
+    with open(aspects_filepath, 'r') as aspects_file:
+        compdb_json_str += aspects_file.read()
+    compdb_json_str += "\n]"
+    return re.sub('__EXEC_ROOT__', bazel_exec_root, compdb_json_str)
+
+
+def get_flags(filepath, compdb_json_str):
+    """Gets the compile command flags from the compile command for the file."""
+
+    compdb_dict = json.loads(compdb_json_str)
+    for entry in compdb_dict:
+        if entry['file'] != filepath:
+            continue
+        command = entry['command']
+        return shlex.split(command)[1:]
+
+    # This could imply we are fetching the wrong compile_commands.json or there
+    # is a bug in aspects.bzl.
+    sys.exit("File {f} not present in the compilation database".format(f=filepath))
+
+
+def standardize_flags(flags, bazel_workspace):
+    """Modifies flags obtained from the compile command for compilation outside of bazel."""
+
+    # We need to add the workspace directly because the files symlinked in the
+    # execroot during a build disappear after a different build action.
+    flags.extend(['-iquote', bazel_workspace])
+
+    flags = [flag.replace('bazel-out/k8-opt/bin/', '') for flag in flags]
+    flags = [
+        flag.split('_virtual_includes', 1)[0] + 'include' if '_virtual_includes' in flag else flag for flag in flags
+    ]
+
+    return flags
+
+
+#pylint: disable=W0613,C0103
+def FlagsForFile(filename, **kwargs):
+    """Function that is called by YCM expecting a dict with at least a 'flags'
+    key that points to an array of strings as flags.
+    """
+
+    bazel_info_dict = bazel_info()
+    bazel_bin = bazel_info_dict['bazel-bin']
+    bazel_genfiles = bazel_info_dict['bazel-genfiles']
+    bazel_exec_root = bazel_info_dict['execution_root']
+    bazel_workspace = bazel_info_dict['workspace']
+
+    os.chdir(bazel_workspace)
+    # Valid prefixes for the file, in decreasing order of specificity.
+    file_prefix = [p for p in [bazel_genfiles, bazel_bin, bazel_exec_root, bazel_workspace] if filename.startswith(p)]
+    if not file_prefix:
+        sys.exit("Not a valid file: " + filename)
+
+    filepath = os.path.relpath(filename, file_prefix[0])
+    file_target = standardize_file_target(file_to_target(filepath))
+
+    # File path relative to execroot, as it will appear in the compile command.
+    if file_prefix[0].startswith(bazel_exec_root):
+        filepath = os.path.relpath(filename, bazel_exec_root)
+
+    cc_rules = "cc_(library|binary|test|inc_library|proto_library)"
+    query_result = bazel_query([('kind("{cc_rules}", rdeps(siblings({f}), {f}, 1))'.format(f=file_target,
+                                                                                           cc_rules=cc_rules)),
+                                '--keep_going'])
+
+    labels = [label.partition(" ")[0] for label in query_result.split('\n') if label]
+
+    if not labels:
+        sys.exit("No cc rules depend on this source file.")
+
+    repository_override = '--override_repository=bazel_compdb=' + os.path.dirname(os.path.realpath(__file__))
+
+    aspect_definition = '--aspects=@bazel_compdb//:aspects.bzl%compilation_database_aspect'
+
+    bazel_aspects = [
+        'bazel',
+        'build',
+        aspect_definition,
+        repository_override,
+        '--output_groups=compdb_files',
+        '--config=adp',
+    ] + labels
+    proc = subprocess.Popen(bazel_aspects, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err = proc.communicate()
+    if proc.returncode != 0:
+        errors = [e for e in out.splitlines() + err.splitlines() if e.startswith("ERROR:")]
+        if errors:
+            raise Exception('/'.join(errors))
+        else:
+            raise Exception(err)
+
+    aspects_filepath = get_aspects_filepath(labels[0], bazel_bin)
+
+    compdb_json = get_compdb_json(aspects_filepath, bazel_exec_root)
+    flags = standardize_flags(get_flags(filepath, compdb_json), bazel_workspace)
+
     return {
-      'flags': flags,
-      'include_paths_relative_to_dir': DirectoryOfThisScript(),
-      'override_filename': filename
+        'flags': flags,
+        'include_paths_relative_to_dir': bazel_exec_root,
     }
 
-  #compilation_info = database.GetCompilationInfoForFile( filename )
-  compilation_info = GetCompilationInfoForFile( filename, database, package_name )
-  if not compilation_info:
-    print "Could not find compilation info"
-    return None
 
-  # Bear in mind that compilation_info.compiler_flags_ does NOT return a
-  # python list, but a "list-like" StringVec object.
-  final_flags = list( compilation_info.compiler_flags_ )
-
-  # NOTE: This is just for YouCompleteMe; it's highly likely that your project
-  # does NOT need to remove the stdlib flag. DO NOT USE THIS IN YOUR
-  # ycm_extra_conf IF YOU'RE NOT 100% SURE YOU NEED IT.
-  try:
-    final_flags.remove( '-stdlib=libc++' )
-  except ValueError:
-    pass
-
-  print "Found flags : " + str(final_flags)
-  return {
-    'flags': final_flags,
-    'include_paths_relative_to_dir': compilation_info.compiler_working_dir_,
-    'override_filename': filename
-  }
+# For testing; needs exactly one argument as path of file.
+if __name__ == '__main__':
+    filename = os.path.abspath(sys.argv[1])
+    print(FlagsForFile(filename))
